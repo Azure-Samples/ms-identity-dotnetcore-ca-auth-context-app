@@ -59,6 +59,14 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Create
         public ActionResult Create()
         {
+            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+
+            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            {
+                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+                return new EmptyResult();
+            }
+
             Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
             return View(todo);
         }
@@ -100,6 +108,7 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Delete/5
         public ActionResult Delete(int id)
         {
+
             return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
         }
 
@@ -108,6 +117,14 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Delete(int id, [Bind("Id,Title,Owner")] Todo todo)
         {
+            string claimsChallenge = CheckForRequiredAuthContext("Delete");
+
+            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            {
+                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+                return new EmptyResult();
+            }
+
             var todo2 = _commonDBContext.Todo.Find(id);
             if (todo2 != null)
             {
@@ -125,8 +142,10 @@ namespace TodoListClient.Controllers
         /// </summary>
         /// <param name="method"></param>
         /// <returns></returns>
-        public void CheckForRequiredAuthContext(string method)
+        public string CheckForRequiredAuthContext(string method)
         {
+            string claimsChallenge = string.Empty;
+
             string savedAuthContextId = _commonDBContext.AuthContext.FirstOrDefault(x => x.Operation == method && x.TenantId == _configuration["AzureAD:TenantId"])?.AuthContextId;
 
             if (!string.IsNullOrEmpty(savedAuthContextId))
@@ -144,48 +163,29 @@ namespace TodoListClient.Controllers
 
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
-                    if (IsClientCapableofClaimsChallenge(context))
-                    {
-                        string clientId = _configuration.GetSection("AzureAd").GetSection("ClientId").Value;
-                        var base64str = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}"));
+                    claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
 
-                        context.Response.Headers.Append("WWW-Authenticate", $"Bearer realm=\"\", authorization_uri=\"https://login.microsoftonline.com/common/oauth2/authorize\", client_id=\"" + clientId + "\", error=\"insufficient_claims\", claims=\"" + base64str + "\", cc_type=\"authcontext\"");
-                        context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        string message = string.Format(CultureInfo.InvariantCulture, "The presented ID tokens had insufficient claims. Please request for claims requested in the WWW-Authentication header and try again.");
-                        context.Response.WriteAsync(message);
-                        context.Response.CompleteAsync();
-                        throw new UnauthorizedAccessException(message);
-                    }
-                    else
-                    {
-                        throw new UnauthorizedAccessException("The caller does not meet the authentication  bar to carry our this operation. The service cannot allow this operation");
-                    }
+                    //if (IsClientCapableofClaimsChallenge(context))
+                    //{
+                    //    string clientId = _configuration.GetSection("AzureAd").GetSection("ClientId").Value;
+                    //    var base64str = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}"));
+
+                    //    context.Response.Headers.Append("WWW-Authenticate", $"Bearer realm=\"\", authorization_uri=\"https://login.microsoftonline.com/common/oauth2/authorize\", client_id=\"" + clientId + "\", error=\"insufficient_claims\", claims=\"" + base64str + "\", cc_type=\"authcontext\"");
+                    //    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    //    string message = string.Format(CultureInfo.InvariantCulture, "The presented ID tokens had insufficient claims. Please request for claims requested in the WWW-Authentication header and try again.");
+                    //    context.Response.WriteAsync(message);
+                    //    context.Response.CompleteAsync();
+                    //    throw new UnauthorizedAccessException(message);
+                    //}
+                    //else
+                    //{
+                    //    throw new UnauthorizedAccessException("The caller does not meet the authentication  bar to carry our this operation. The service cannot allow this operation");
+                    //}
                 }
             }
+
+            return claimsChallenge;
         }
 
-        /// <summary>
-        /// Evaluates for the presence of the client capabilities claim (xms_cc) and accordingly returns a response if present.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        public bool IsClientCapableofClaimsChallenge(HttpContext context)
-        {
-            string clientCapabilitiesClaim = "xms_cc";
-
-            if (context == null || context.User == null || context.User.Claims == null || !context.User.Claims.Any())
-            {
-                throw new ArgumentNullException("No Usercontext is available to pick claims from");
-            }
-
-            Claim ccClaim = context.User.FindAll(clientCapabilitiesClaim).FirstOrDefault(x => x.Type == "xms_cc");
-
-            if (ccClaim != null && ccClaim.Value == "cp1")
-            {
-                return true;
-            }
-
-            return false;
-        }
     }
 }

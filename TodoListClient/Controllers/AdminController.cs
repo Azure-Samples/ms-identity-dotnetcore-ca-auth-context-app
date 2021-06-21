@@ -33,11 +33,10 @@ namespace TodoListClient.Controllers
 
         private string TenantId;
 
-        public AdminController(IConfiguration configuration, AuthenticationContextClassReferencesOperations authContextClassReferencesOperations, CommonDBContext commonDBContext)
+        public AdminController(IConfiguration configuration, AuthenticationContextClassReferencesOperations authContextClassReferencesOperations)
         {
             _configuration = configuration;
             _authContextClassReferencesOperations = authContextClassReferencesOperations;
-           // _commonDBContext = commonDBContext;
             TenantId = _configuration["AzureAd:TenantId"];
         }
 
