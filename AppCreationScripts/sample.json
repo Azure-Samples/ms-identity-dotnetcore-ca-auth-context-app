@@ -24,9 +24,14 @@
         {
           "Resource": "Microsoft Graph",
           "DelegatedPermissions": [
-              "User.Read"
+              "User.Read", "Policy.Read.ConditionalAccess", "Policy.ReadWrite.ConditionalAccess"
           ]
       }
+      ],
+      "ManualSteps": [
+        {
+          "Comment": "Navigate to the API Permissions page and select 'Grant admin consent for (your tenant)'"
+        }
       ]
     }
   ],
@@ -58,14 +63,6 @@
         {
           "key": "ClientSecret",
           "value": ".AppKey"
-        },
-        {
-          "key": "TodoListScope",
-          "value": "service.Scope"
-        },
-        {
-          "key": "TodoListBaseAddress",
-          "value": "service.HomePage"
         }
       ]
     }

@@ -138,7 +138,7 @@ namespace TodoListClient.Controllers
         /// <summary>
         /// Retrieves the acrsValue from database for the request method.
         /// Checks if the access token has acrs claim with acrsValue.
-        /// If does not exists then adds WWW-Authenticate and throws UnauthorizedAccessException exception.
+        /// If does not exists then it generates a claims payload to be sent to /authorize endpoint
         /// </summary>
         /// <param name="method"></param>
         /// <returns></returns>
@@ -164,23 +164,7 @@ namespace TodoListClient.Controllers
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
                     claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
-
-                    //if (IsClientCapableofClaimsChallenge(context))
-                    //{
-                    //    string clientId = _configuration.GetSection("AzureAd").GetSection("ClientId").Value;
-                    //    var base64str = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}"));
-
-                    //    context.Response.Headers.Append("WWW-Authenticate", $"Bearer realm=\"\", authorization_uri=\"https://login.microsoftonline.com/common/oauth2/authorize\", client_id=\"" + clientId + "\", error=\"insufficient_claims\", claims=\"" + base64str + "\", cc_type=\"authcontext\"");
-                    //    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                    //    string message = string.Format(CultureInfo.InvariantCulture, "The presented ID tokens had insufficient claims. Please request for claims requested in the WWW-Authentication header and try again.");
-                    //    context.Response.WriteAsync(message);
-                    //    context.Response.CompleteAsync();
-                    //    throw new UnauthorizedAccessException(message);
-                    //}
-                    //else
-                    //{
-                    //    throw new UnauthorizedAccessException("The caller does not meet the authentication  bar to carry our this operation. The service cannot allow this operation");
-                    //}
+                
                 }
             }
 

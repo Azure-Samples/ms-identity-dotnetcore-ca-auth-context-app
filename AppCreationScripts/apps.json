@@ -1,7 +1,7 @@
 {
   "Sample": {
-    "Title": "Use the Conditional Access auth context to perform step-up authentication for high-privilege operations in a Web app",
-    "Level": 400,
+    "Title": "This sample demonstrates using the Conditional Access auth context to perform step-up authentication for high-privilege and sensitive operations in a web app.",
+    "Level": 300,
     "Client": "ASP.NET Core Web App"
   },
   "AppRegistrations": [
@@ -29,6 +29,16 @@
               "id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
               "type": "Scope",
               "x-ms-name": "User.Read"
+            },
+            {
+              "id": "unknown",
+              "type": "Scope",
+              "x-ms-name": "Policy.Read.ConditionalAccess"
+            },
+            {
+              "id": "unknown",
+              "type": "Scope",
+              "x-ms-name": "Policy.ReadWrite.ConditionalAccess"
             } ]
         }
       ],
