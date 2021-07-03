@@ -63,6 +63,7 @@ or download and extract the repository .zip file.
 ### Step 2: Install project dependencies
 
 ```console
+    cd ms-identity-dotnetcore-ca-auth-context-app
     dotnet restore
 ```
 
@@ -138,6 +139,7 @@ As a first step you'll need to:
    - In the **Delegated permissions** section, select the **User.Read**, **Policy.Read.ConditionalAccess**, **Policy.ReadWrite.ConditionalAccess** in the list. Use the search box if necessary.
    - `Note: The Graph permission, **Policy.ReadWrite.ConditionalAccess** is required for creating new auth context records by this sample. In production, the permission, **Policy.Read.ConditionalAccess** should be sufficient to read existing values and thus is recommended.`
    - Select the **Add permissions** button at the bottom.
+   - It is advisable to grant admin consent for these permissions here on this screen.
 
 #### Configure the client app (TodoListClient-authContext-webapp) to use your app registration
 
@@ -158,7 +160,7 @@ Open the project in your IDE (like Visual Studio or Visual Studio Code) to confi
 > Clean the solution, rebuild the solution, and run it.  You might want to go into the solution properties and set both projects as startup projects, with the service project starting first.
 
 ```console
-    cd TodoListClient-authContext-webapp
+    cd TodoListClient
     dotnet run
 ```
 
@@ -216,7 +218,7 @@ If an operation was saved for a certain authContext and there is a CA policy con
             .AddMicrosoftIdentityWebApp(Configuration, "AzureAd", subscribeToOpenIdConnectMiddlewareDiagnosticsEvents: true)
     ```
 
-    Additionally, the following lines of code this app to call Ms Graph.
+    Additionally, the following lines of code this app to call MS Graph.
 
     ```csharp
 

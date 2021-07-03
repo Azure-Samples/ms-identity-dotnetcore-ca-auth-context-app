@@ -76,6 +76,14 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create([Bind("Title,Owner")] Todo todo)
         {
+            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+
+            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            {
+                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+                return new EmptyResult();
+            }
+
             Todo todonew = new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title };
             _commonDBContext.Todo.Add(todonew);
             _commonDBContext.SaveChanges();
