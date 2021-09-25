@@ -7,7 +7,7 @@ param(
     [string] $azureEnvironmentName
 )
 
-#Requires -Modules AzureAD -RunAsAdministrator
+#Requires -Modules AzureAD
 
 <#
  This script creates the Azure AD applications needed for this sample and updates the configuration files

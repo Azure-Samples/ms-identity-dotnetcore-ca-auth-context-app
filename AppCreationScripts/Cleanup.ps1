@@ -7,7 +7,7 @@ param(
     [string] $azureEnvironmentName
 )
 
-#Requires -Modules AzureAD -RunAsAdministrator
+#Requires -Modules AzureAD
 
 
 if ($null -eq (Get-Module -ListAvailable -Name "AzureAD")) { 
