@@ -62,19 +62,20 @@ or download and extract the repository .zip file.
 
 > :warning: To avoid path length limitations on Windows, we recommend cloning into a directory near the root of your drive.
 
-### Step 2 (Setup with PowerShell script): Register the sample application(s) with your Azure Active Directory tenant
-
 There is one project in this sample. To register it, you can:
 
 - follow the steps below for manually register your apps
-- or use PowerShell scripts that:
-  - **automatically** creates the Azure AD applications and related objects (passwords, permissions, dependencies) for you.
-  - modify the projects' configuration files.
+- or use PowerShell
 
-<details>
-  <summary>Expand this section if you want to use this automation:</summary>
+### Step 2 (Setup with PowerShell script): Register the sample application(s) with your Azure Active Directory tenant:
 
-> :warning: If you have never used **Azure AD Powershell** before, we recommend you go through the [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md) once to ensure that your environment is prepared correctly for this step.
+- **automatically** creates the Azure AD applications and related objects (passwords, permissions, dependencies) for you.
+- modify the projects' configuration files.
+
+ <details>
+   <summary>Expand this section if you want to use this automation:</summary>
+
+  > :warning: If you have never used **Azure AD Powershell** before, we recommend you go through the [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md) once to ensure that your environment is prepared correctly for this step.
 
 1. On Windows, run PowerShell as **Administrator** and navigate to the root of the cloned directory
 1. If you have never used Azure AD Powershell before, we recommend you go through the [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md) once to ensure that your environment is prepared correctly for this step.
@@ -95,7 +96,7 @@ There is one project in this sample. To register it, you can:
    > Other ways of running the scripts are described in [App Creation Scripts](./AppCreationScripts/AppCreationScripts.md)
    > The scripts also provide a guide to automated application registration, configuration and removal which can help in your CI/CD scenarios.
 
-</details>
+ </details>
 
 ### Step 2 (Alternative Manual setup): Choose the Azure AD tenant where you want to create your applications
 
