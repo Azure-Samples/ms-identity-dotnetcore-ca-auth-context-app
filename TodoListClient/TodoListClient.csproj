@@ -25,14 +25,17 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Graph" Version="3.35.0" />
+    <PackageReference Include="Microsoft.Graph" Version="4.6.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.0.1-preview" Aliases="BetaLib" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.34.0" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.14.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.36.1" />
     <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraphBeta" Version="1.14.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.14.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.5" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\AzureAD\microsoft-identity-web\src\Microsoft.Identity.Web.UI\Microsoft.Identity.Web.UI.csproj" />
+    <ProjectReference Include="..\..\..\AzureAD\microsoft-identity-web\src\Microsoft.Identity.Web\Microsoft.Identity.Web.csproj" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="https://json.schemastore.org/global.json" /></VisualStudio></ProjectExtensions>

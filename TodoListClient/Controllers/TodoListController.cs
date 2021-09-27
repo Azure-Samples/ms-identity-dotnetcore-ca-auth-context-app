@@ -89,6 +89,8 @@ namespace TodoListClient.Controllers
         {
             string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
 
+            //_postData = todo;
+
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
