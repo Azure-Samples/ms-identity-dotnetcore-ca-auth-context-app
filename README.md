@@ -62,14 +62,7 @@ or download and extract the repository .zip file.
 
 > :warning: To avoid path length limitations on Windows, we recommend cloning into a directory near the root of your drive.
 
-### Step 2: Install project dependencies
-
-```console
-    cd ms-identity-dotnetcore-ca-auth-context-app
-    dotnet restore
-```
-
-### Register the sample application(s) with your Azure Active Directory tenant
+### Step 2 (Setup with PowerShell script): Register the sample application(s) with your Azure Active Directory tenant
 
 There is one project in this sample. To register it, you can:
 
@@ -104,14 +97,14 @@ There is one project in this sample. To register it, you can:
 
 </details>
 
-### Choose the Azure AD tenant where you want to create your applications
+### Step 2 (Alternative Manual setup): Choose the Azure AD tenant where you want to create your applications
 
 As a first step you'll need to:
 
 1. Sign in to the [Azure portal](https://portal.azure.com).
 1. If your account is present in more than one Azure AD tenant, select your profile at the top right corner in the menu on top of the page, and then **switch directory** to change your portal session to the desired Azure AD tenant.
 
-### Register the client app (TodoListClient-authContext-webapp)
+#### Register the client app (TodoListClient-authContext-webapp)
 
 1. Navigate to the [Azure portal](https://portal.azure.com) and select the **Azure AD** service.
 1. Select the **App Registrations** blade on the left, then select **New registration**.
