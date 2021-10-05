@@ -387,6 +387,86 @@ if (!string.IsNullOrWhiteSpace(claimsChallenge))
 
 ```
 
+### Using Cookies
+
+When a ChallengeUser method is called, the redirect URL is pointing to GET method by default. When the challenge happen during Create POST, for example, user will have a bad experience after being redirected to Create GET. One of the ways to smoothen user experience is to use browser cookies to store fields information.
+Take a look into the example of using cookies.
+
+```csharp
+    // GET: TodoList/Create
+    public ActionResult Create()
+    {
+        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+
+        if (!string.IsNullOrWhiteSpace(claimsChallenge))
+        {
+            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+            
+            return new EmptyResult();
+        }
+
+        if (!string.IsNullOrEmpty(Request.Cookies["Title"]) && !string.IsNullOrEmpty(Request.Cookies["Owner"]))
+        {
+            StoreTodo(new Todo() { Owner = Request.Cookies["Owner"], Title = Request.Cookies["Title"] });
+
+            TodoCookiesAction(CookiesAction.Delete);
+
+            return RedirectToAction("Index");
+        }
+
+        Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
+        return View(todo);
+    }
+    // POST: TodoList/Create
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public ActionResult Create([Bind("Title,Owner")] Todo todo)
+    {
+        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+    
+        if (!string.IsNullOrWhiteSpace(claimsChallenge))
+        {
+            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+    
+            TodoCookiesAction(CookiesAction.Append, todo);
+    
+            return new EmptyResult();
+        }
+    
+        StoreTodo( new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+        
+        return RedirectToAction("Index");
+    }
+    /// <summary>
+    /// Store/Delete ToDo List item in cookies in case of the flow redirected to GET method
+    /// </summary>
+    /// <param name="action">Actual action of Append or Delete the cookie</param>
+    /// <param name="todo">Data to persist</param>
+    private void TodoCookiesAction(CookiesAction action, Todo todo = null)
+    {
+        switch (action)
+        {
+            case CookiesAction.Delete:
+                Response.Cookies.Delete("Title");
+                Response.Cookies.Delete("Owner");
+                break;
+            case CookiesAction.Append:
+                Response.Cookies.Append("Title", todo.Title);
+                Response.Cookies.Append("Owner", todo.Owner);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private enum CookiesAction
+    {
+        Delete,
+        Append
+    }
+```
+
+
 ## More information
 
 - [Developers’ guide to Conditional Access authentication context](https://docs.microsoft.com/azure/active-directory/develop/developer-guide-conditional-access-authentication-context)

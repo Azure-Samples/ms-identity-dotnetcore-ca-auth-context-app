@@ -4,11 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Web;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Security.Claims;
-using System.Text;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
@@ -47,6 +44,9 @@ namespace TodoListClient.Controllers
         [AuthorizeForScopes(ScopeKeySection = "TodoList:TodoListScope")]
         public ActionResult Index()
         {
+            //reset cookies on every entry to TODO's list
+            TodoCookiesAction(CookiesAction.Delete);
+
             return View(_commonDBContext.Todo.ToList());
         }
 
@@ -64,7 +64,17 @@ namespace TodoListClient.Controllers
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+                
                 return new EmptyResult();
+            }
+
+            if (!string.IsNullOrEmpty(Request.Cookies["Title"]) && !string.IsNullOrEmpty(Request.Cookies["Owner"]))
+            {
+                StoreTodo(new Todo() { Owner = Request.Cookies["Owner"], Title = Request.Cookies["Title"] });
+
+                TodoCookiesAction(CookiesAction.Delete);
+
+                return RedirectToAction("Index");
             }
 
             Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
@@ -81,12 +91,14 @@ namespace TodoListClient.Controllers
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+
+                TodoCookiesAction(CookiesAction.Append, todo);
+
                 return new EmptyResult();
             }
 
-            Todo todonew = new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title };
-            _commonDBContext.Todo.Add(todonew);
-            _commonDBContext.SaveChanges();
+            StoreTodo( new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+            
             return RedirectToAction("Index");
         }
 
@@ -116,7 +128,6 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Delete/5
         public ActionResult Delete(int id)
         {
-
             return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
         }
 
@@ -177,6 +188,40 @@ namespace TodoListClient.Controllers
             }
 
             return claimsChallenge;
+        }
+
+        private void StoreTodo(Todo todo)
+        {
+            _commonDBContext.Todo.Add(todo);
+            _commonDBContext.SaveChanges();
+        }
+
+        /// <summary>
+        /// Store/Delete ToDo List item in cookies in case of the flow redirected to GET method
+        /// </summary>
+        /// <param name="action">Actual action of Append or Delete the cookie</param>
+        /// <param name="todo">Data to persist</param>
+        private void TodoCookiesAction(CookiesAction action, Todo todo = null)
+        {
+            switch (action)
+            {
+                case CookiesAction.Delete:
+                    Response.Cookies.Delete("Title");
+                    Response.Cookies.Delete("Owner");
+                    break;
+                case CookiesAction.Append:
+                    Response.Cookies.Append("Title", todo.Title);
+                    Response.Cookies.Append("Owner", todo.Owner);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private enum CookiesAction
+        {
+            Delete,
+            Append
         }
 
     }
