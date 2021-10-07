@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
@@ -14,13 +15,11 @@ namespace TodoListClient.Controllers
     {
         private CommonDBContext _commonDBContext;
 
-        private readonly IHttpContextAccessor _contextAccessor;
         private IConfiguration _configuration;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
         public TodoListController(IHttpContextAccessor contextAccessor, IConfiguration configuration, CommonDBContext commonDBContext, MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
         {
-            _contextAccessor = contextAccessor;
             _configuration = configuration;
             _commonDBContext = commonDBContext;
             this._consentHandler = consentHandler;
@@ -45,7 +44,7 @@ namespace TodoListClient.Controllers
         public ActionResult Index()
         {
             //reset cookies on every entry to TODO's list
-            TodoCookiesAction(CookiesAction.Delete);
+            TodoSessionState(SessionAction.Set);
 
             return View(_commonDBContext.Todo.ToList());
         }
@@ -64,15 +63,17 @@ namespace TodoListClient.Controllers
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-                
+
                 return new EmptyResult();
             }
 
-            if (!string.IsNullOrEmpty(Request.Cookies["Title"]) && !string.IsNullOrEmpty(Request.Cookies["Owner"]))
-            {
-                StoreTodo(new Todo() { Owner = Request.Cookies["Owner"], Title = Request.Cookies["Title"] });
+            var todoObject = TodoSessionState(SessionAction.Get);
 
-                TodoCookiesAction(CookiesAction.Delete);
+            if (todoObject.IsInitialized())
+            {
+                StoreTodo(todoObject);
+
+                TodoSessionState(SessionAction.Set);
 
                 return RedirectToAction("Index");
             }
@@ -92,13 +93,13 @@ namespace TodoListClient.Controllers
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
 
-                TodoCookiesAction(CookiesAction.Append, todo);
+                TodoSessionState(SessionAction.Set, todo);
 
                 return new EmptyResult();
             }
 
-            StoreTodo( new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
-            
+            StoreTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+
             return RedirectToAction("Index");
         }
 
@@ -183,7 +184,7 @@ namespace TodoListClient.Controllers
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
                     claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
-                
+
                 }
             }
 
@@ -197,32 +198,41 @@ namespace TodoListClient.Controllers
         }
 
         /// <summary>
-        /// Store/Delete ToDo List item in cookies in case of the flow redirected to GET method
+        /// Set/Get ToDo List item in session state in case of the flow redirected to GET method
         /// </summary>
-        /// <param name="action">Actual action of Append or Delete the cookie</param>
+        /// <param name="action">Actual action of Set or Get the session state</param>
         /// <param name="todo">Data to persist</param>
-        private void TodoCookiesAction(CookiesAction action, Todo todo = null)
+        private Todo TodoSessionState(SessionAction action, Todo todo = null)
         {
+            string titleKey = "Title", ownerKey = "Owner";
+
             switch (action)
             {
-                case CookiesAction.Delete:
-                    Response.Cookies.Delete("Title");
-                    Response.Cookies.Delete("Owner");
+                case SessionAction.Set:
+                    HttpContext.Session.SetString(titleKey, todo != null ? JsonSerializer.Serialize(todo.Title) : "");
+                    HttpContext.Session.SetString(ownerKey, todo != null ? JsonSerializer.Serialize(todo.Owner) : "");
                     break;
-                case CookiesAction.Append:
-                    Response.Cookies.Append("Title", todo.Title);
-                    Response.Cookies.Append("Owner", todo.Owner);
-                    break;
+                case SessionAction.Get:
+                    return new Todo
+                    {
+                        Title =
+                        !string.IsNullOrEmpty(HttpContext.Session.GetString(titleKey)) ?
+                        JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(titleKey)) : "",
+                        Owner = !string.IsNullOrEmpty(HttpContext.Session.GetString(ownerKey)) ?
+                        JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(ownerKey)) : ""
+                    };
+
                 default:
                     break;
             }
+
+            return todo;
         }
 
-        private enum CookiesAction
+        private enum SessionAction
         {
-            Delete,
-            Append
+            Set,
+            Get
         }
-
     }
 }

@@ -387,10 +387,10 @@ if (!string.IsNullOrWhiteSpace(claimsChallenge))
 
 ```
 
-### Using Cookies
+### Using Session State
 
-When a ChallengeUser method is called, the redirect URL is pointing to GET method by default. When the challenge happen during Create POST, for example, user will have a bad experience after being redirected to Create GET. One of the ways to smoothen user experience is to use browser cookies to store fields information.
-Take a look into the example of using cookies.
+When a ChallengeUser method is called, the redirect URL is pointing to GET method by default. When the challenge happen during Create POST, for example, user will have a bad experience after being redirected to Create GET. One of the ways to smoothen user experience is to use session state to store fields information.
+Take a look into the example of using session state.
 
 ```csharp
     // GET: TodoList/Create
@@ -401,15 +401,17 @@ Take a look into the example of using cookies.
         if (!string.IsNullOrWhiteSpace(claimsChallenge))
         {
             _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-            
+
             return new EmptyResult();
         }
 
-        if (!string.IsNullOrEmpty(Request.Cookies["Title"]) && !string.IsNullOrEmpty(Request.Cookies["Owner"]))
-        {
-            StoreTodo(new Todo() { Owner = Request.Cookies["Owner"], Title = Request.Cookies["Title"] });
+        var todoObject = TodoSessionState(SessionAction.Get);
 
-            TodoCookiesAction(CookiesAction.Delete);
+        if (todoObject.IsInitialized())
+        {
+            StoreTodo(todoObject);
+
+            TodoSessionState(SessionAction.Set);
 
             return RedirectToAction("Index");
         }
@@ -423,49 +425,57 @@ Take a look into the example of using cookies.
     public ActionResult Create([Bind("Title,Owner")] Todo todo)
     {
         string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-    
+
         if (!string.IsNullOrWhiteSpace(claimsChallenge))
         {
             _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-    
-            TodoCookiesAction(CookiesAction.Append, todo);
-    
+
+            TodoSessionState(SessionAction.Set, todo);
+
             return new EmptyResult();
         }
-    
-        StoreTodo( new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
-        
+
+        StoreTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+
         return RedirectToAction("Index");
     }
     /// <summary>
-    /// Store/Delete ToDo List item in cookies in case of the flow redirected to GET method
+    /// Set/Get ToDo List item in session state in case of the flow redirected to GET method
     /// </summary>
-    /// <param name="action">Actual action of Append or Delete the cookie</param>
+    /// <param name="action">Actual action of Set or Get the session state</param>
     /// <param name="todo">Data to persist</param>
-    private void TodoCookiesAction(CookiesAction action, Todo todo = null)
+    private Todo TodoSessionState(SessionAction action, Todo todo = null)
     {
+        string titleKey = "Title", ownerKey = "Owner";
+
         switch (action)
         {
-            case CookiesAction.Delete:
-                Response.Cookies.Delete("Title");
-                Response.Cookies.Delete("Owner");
+            case SessionAction.Set:
+                HttpContext.Session.SetString(titleKey, todo != null ? JsonSerializer.Serialize(todo.Title) : "");
+                HttpContext.Session.SetString(ownerKey, todo != null ? JsonSerializer.Serialize(todo.Owner) : "");
                 break;
-            case CookiesAction.Append:
-                Response.Cookies.Append("Title", todo.Title);
-                Response.Cookies.Append("Owner", todo.Owner);
-                break;
+            case SessionAction.Get:
+                return new Todo
+                {
+                    Title =
+                    !string.IsNullOrEmpty(HttpContext.Session.GetString(titleKey)) ?
+                    JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(titleKey)) : "",
+                    Owner = !string.IsNullOrEmpty(HttpContext.Session.GetString(ownerKey)) ?
+                    JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(ownerKey)) : ""
+                };
+
             default:
                 break;
         }
-    }
 
-    private enum CookiesAction
+        return todo;
+    }
+    private enum SessionAction
     {
-        Delete,
-        Append
+        Set,
+        Get
     }
 ```
-
 
 ## More information
 

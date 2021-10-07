@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace TodoListClient.Models
+﻿namespace TodoListClient.Models
 {
     public class Todo
     {
@@ -12,5 +7,10 @@ namespace TodoListClient.Models
         public string Title { get; set; }
 
         public string Owner { get; set; }
+
+        internal bool IsInitialized()
+        {
+            return !string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(Owner);
+        }
     }
 }
