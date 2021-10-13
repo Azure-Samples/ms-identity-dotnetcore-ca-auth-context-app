@@ -407,7 +407,7 @@ Take a look into the example of using session state.
 
         var todoObject = TodoSessionState(SessionAction.Get);
 
-        if (todoObject.IsInitialized())
+        if (todo != null && todoObject.IsInitialized())
         {
             StoreTodo(todoObject);
 
@@ -446,29 +446,23 @@ Take a look into the example of using session state.
     /// <param name="todo">Data to persist</param>
     private Todo TodoSessionState(SessionAction action, Todo todo = null)
     {
-        string titleKey = "Title", ownerKey = "Owner";
+        string todoObject = "Todo";
 
-        switch (action)
-        {
-            case SessionAction.Set:
-                HttpContext.Session.SetString(titleKey, todo != null ? JsonSerializer.Serialize(todo.Title) : "");
-                HttpContext.Session.SetString(ownerKey, todo != null ? JsonSerializer.Serialize(todo.Owner) : "");
-                break;
-            case SessionAction.Get:
-                return new Todo
-                {
-                    Title =
-                    !string.IsNullOrEmpty(HttpContext.Session.GetString(titleKey)) ?
-                    JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(titleKey)) : "",
-                    Owner = !string.IsNullOrEmpty(HttpContext.Session.GetString(ownerKey)) ?
-                    JsonSerializer.Deserialize<string>(HttpContext.Session.GetString(ownerKey)) : ""
-                };
+            switch (action)
+            {
+                case SessionAction.Set:
+                    HttpContext.Session.SetString(todoObject, todo != null ? JsonSerializer.Serialize(todo) : "");
+                    break;
 
-            default:
-                break;
-        }
+                case SessionAction.Get:
+                    var obj = HttpContext.Session.GetString(todoObject);
+                    return !string.IsNullOrEmpty(obj) ? JsonSerializer.Deserialize<Todo>(obj) : null;
 
-        return todo;
+                default:
+                    break;
+            }
+
+            return todo;
     }
     private enum SessionAction
     {
