@@ -4,11 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Web;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Security.Claims;
-using System.Text;
+using System.Text.Json;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
@@ -17,13 +15,11 @@ namespace TodoListClient.Controllers
     {
         private CommonDBContext _commonDBContext;
 
-        private readonly IHttpContextAccessor _contextAccessor;
         private IConfiguration _configuration;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
         public TodoListController(IHttpContextAccessor contextAccessor, IConfiguration configuration, CommonDBContext commonDBContext, MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
         {
-            _contextAccessor = contextAccessor;
             _configuration = configuration;
             _commonDBContext = commonDBContext;
             this._consentHandler = consentHandler;
@@ -47,6 +43,9 @@ namespace TodoListClient.Controllers
         [AuthorizeForScopes(ScopeKeySection = "TodoList:TodoListScope")]
         public ActionResult Index()
         {
+            //reset session on every entry to TODO's list
+            TodoSessionState(SessionAction.Set);
+
             return View(_commonDBContext.Todo.ToList());
         }
 
@@ -64,7 +63,19 @@ namespace TodoListClient.Controllers
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+
                 return new EmptyResult();
+            }
+
+            var todoObject = TodoSessionState(SessionAction.Get);
+
+            if (todoObject != null && todoObject.IsInitialized())
+            {
+                PersistTodo(todoObject);
+
+                TodoSessionState(SessionAction.Set);
+
+                return RedirectToAction("Index");
             }
 
             Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
@@ -81,12 +92,14 @@ namespace TodoListClient.Controllers
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
                 _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+
+                TodoSessionState(SessionAction.Set, todo);
+
                 return new EmptyResult();
             }
 
-            Todo todonew = new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title };
-            _commonDBContext.Todo.Add(todonew);
-            _commonDBContext.SaveChanges();
+            PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+
             return RedirectToAction("Index");
         }
 
@@ -116,7 +129,6 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Delete/5
         public ActionResult Delete(int id)
         {
-
             return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
         }
 
@@ -172,12 +184,49 @@ namespace TodoListClient.Controllers
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
                     claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
-                
+
                 }
             }
 
             return claimsChallenge;
         }
 
+        private void PersistTodo(Todo todo)
+        {
+            _commonDBContext.Todo.Add(todo);
+            _commonDBContext.SaveChanges();
+        }
+
+        /// <summary>
+        /// Set/Get ToDo List item in session state in case of the flow redirected to GET method
+        /// </summary>
+        /// <param name="action">Actual action of Set or Get the session state</param>
+        /// <param name="todo">Data to persist</param>
+        private Todo TodoSessionState(SessionAction action, Todo todo = null)
+        {
+            string todoObject = "Todo";
+
+            switch (action)
+            {
+                case SessionAction.Set:
+                    HttpContext.Session.SetString(todoObject, todo != null ? JsonSerializer.Serialize(todo) : "");
+                    break;
+
+                case SessionAction.Get:
+                    var obj = HttpContext.Session.GetString(todoObject);
+                    return !string.IsNullOrEmpty(obj) ? JsonSerializer.Deserialize<Todo>(obj) : null;
+
+                default:
+                    break;
+            }
+
+            return todo;
+        }
+
+        private enum SessionAction
+        {
+            Set,
+            Get
+        }
     }
 }

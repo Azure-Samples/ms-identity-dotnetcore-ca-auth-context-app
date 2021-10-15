@@ -387,6 +387,65 @@ if (!string.IsNullOrWhiteSpace(claimsChallenge))
 
 ```
 
+### Using Session State for better user experience
+
+When the `ChallengeUser()` method is called, the redirect URL of the request sent to Azure AD will bring the user back to the /GET path. So the user might get confused if the authentication context was applied to an action like /CREATE. To make for a smoother user experience, we use the [ASP.NET Session state](https://docs.microsoft.com/aspnet/core/fundamentals/app-state) to store the user's input. This allows us to restore the ToDo item once the user has come back to the web app after redirection.
+
+Take a look into the example of using session state.
+
+```csharp
+    // GET: TodoList/Create
+    public ActionResult Create()
+    {
+        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+        if (!string.IsNullOrWhiteSpace(claimsChallenge))
+        {
+            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+            return new EmptyResult();
+        }
+        var todoObject = TodoSessionState(SessionAction.Get);
+        if (todo != null && todoObject.IsInitialized())
+        {
+            PersistTodo(todoObject);
+            TodoSessionState(SessionAction.Set);
+            return RedirectToAction("Index");
+        }
+        Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
+        return View(todo);
+    }
+    // POST: TodoList/Create
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public ActionResult Create([Bind("Title,Owner")] Todo todo)
+    {
+        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+        if (!string.IsNullOrWhiteSpace(claimsChallenge))
+        {
+            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+            TodoSessionState(SessionAction.Set, todo);
+            return new EmptyResult();
+        }
+        PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+        return RedirectToAction("Index");
+    }
+    private Todo TodoSessionState(SessionAction action, Todo todo = null)
+    {
+        string todoObject = "Todo";
+            switch (action)
+            {
+                case SessionAction.Set:
+                    HttpContext.Session.SetString(todoObject, todo != null ? JsonSerializer.Serialize(todo) : "");
+                    break;
+                case SessionAction.Get:
+                    var obj = HttpContext.Session.GetString(todoObject);
+                    return !string.IsNullOrEmpty(obj) ? JsonSerializer.Deserialize<Todo>(obj) : null;
+                default:
+                    break;
+            }
+            return todo;
+    }
+```
+
 ## More information
 
 - [Developers’ guide to Conditional Access authentication context](https://docs.microsoft.com/azure/active-directory/develop/developer-guide-conditional-access-authentication-context)
