@@ -387,9 +387,10 @@ if (!string.IsNullOrWhiteSpace(claimsChallenge))
 
 ```
 
-### Using Session State
+### Using Session State for better user experience
 
-When a ChallengeUser method is called, the redirect URL is pointing to GET method by default. When the challenge happen during Create POST, for example, user will have a bad experience after being redirected to Create GET. One of the ways to smoothen user experience is to use session state to store fields information.
+When the `ChallengeUser()` method is called, the redirect URL of the request sent to Azure AD will bring the user back to the /GET path. So the user might get confused if the authentication context was applied to an action like /CREATE. To make for a smoother user experience, we use the [ASP.NET Session state](https://docs.microsoft.com/aspnet/core/fundamentals/app-state) to store the user's input. This allows us to restore the ToDo item once the user has come back to the web app after redirection.
+
 Take a look into the example of using session state.
 
 ```csharp
@@ -397,25 +398,18 @@ Take a look into the example of using session state.
     public ActionResult Create()
     {
         string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-
         if (!string.IsNullOrWhiteSpace(claimsChallenge))
         {
             _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-
             return new EmptyResult();
         }
-
         var todoObject = TodoSessionState(SessionAction.Get);
-
         if (todo != null && todoObject.IsInitialized())
         {
-            StoreTodo(todoObject);
-
+            PersistTodo(todoObject);
             TodoSessionState(SessionAction.Set);
-
             return RedirectToAction("Index");
         }
-
         Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
         return View(todo);
     }
@@ -425,49 +419,30 @@ Take a look into the example of using session state.
     public ActionResult Create([Bind("Title,Owner")] Todo todo)
     {
         string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-
         if (!string.IsNullOrWhiteSpace(claimsChallenge))
         {
             _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-
             TodoSessionState(SessionAction.Set, todo);
-
             return new EmptyResult();
         }
-
-        StoreTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
-
+        PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
         return RedirectToAction("Index");
     }
-    /// <summary>
-    /// Set/Get ToDo List item in session state in case of the flow redirected to GET method
-    /// </summary>
-    /// <param name="action">Actual action of Set or Get the session state</param>
-    /// <param name="todo">Data to persist</param>
     private Todo TodoSessionState(SessionAction action, Todo todo = null)
     {
         string todoObject = "Todo";
-
             switch (action)
             {
                 case SessionAction.Set:
                     HttpContext.Session.SetString(todoObject, todo != null ? JsonSerializer.Serialize(todo) : "");
                     break;
-
                 case SessionAction.Get:
                     var obj = HttpContext.Session.GetString(todoObject);
                     return !string.IsNullOrEmpty(obj) ? JsonSerializer.Deserialize<Todo>(obj) : null;
-
                 default:
                     break;
             }
-
             return todo;
-    }
-    private enum SessionAction
-    {
-        Set,
-        Get
     }
 ```
 

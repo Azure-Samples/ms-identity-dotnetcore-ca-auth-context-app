@@ -43,7 +43,7 @@ namespace TodoListClient.Controllers
         [AuthorizeForScopes(ScopeKeySection = "TodoList:TodoListScope")]
         public ActionResult Index()
         {
-            //reset cookies on every entry to TODO's list
+            //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 
             return View(_commonDBContext.Todo.ToList());
@@ -71,7 +71,7 @@ namespace TodoListClient.Controllers
 
             if (todoObject != null && todoObject.IsInitialized())
             {
-                StoreTodo(todoObject);
+                PersistTodo(todoObject);
 
                 TodoSessionState(SessionAction.Set);
 
@@ -98,7 +98,7 @@ namespace TodoListClient.Controllers
                 return new EmptyResult();
             }
 
-            StoreTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+            PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
 
             return RedirectToAction("Index");
         }
@@ -191,7 +191,7 @@ namespace TodoListClient.Controllers
             return claimsChallenge;
         }
 
-        private void StoreTodo(Todo todo)
+        private void PersistTodo(Todo todo)
         {
             _commonDBContext.Todo.Add(todo);
             _commonDBContext.SaveChanges();

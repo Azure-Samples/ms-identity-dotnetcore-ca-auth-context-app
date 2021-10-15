@@ -8,7 +8,8 @@
 
         public string Owner { get; set; }
 
-        internal bool IsInitialized()
+        //Return true only if both Title and Owners are not empty strings 
+        public bool IsInitialized()
         {
             return !string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(Owner);
         }
