@@ -43,7 +43,7 @@
                         @item.Operation
                     </td>
                     <td>
-                        @Html.ActionLink("Delete", "Delete", new { id = @item.AuthContextId })
+                        @Html.ActionLink("Delete", "Delete", new { id = @item.AuthContextId + "_" + @item.Operation })
 
                     </td>
                 </tr>
