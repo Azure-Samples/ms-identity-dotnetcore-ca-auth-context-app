@@ -46,7 +46,7 @@ namespace TodoListClient.Controllers
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 
-            return View(_commonDBContext.Todo.ToList());
+            return View(_commonDBContext.Todo.Where(l => l.Owner.Equals(HttpContext.User.Identity.Name)).ToList());
         }
 
         // GET: TodoList/Details/5
