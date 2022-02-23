@@ -46,7 +46,7 @@ namespace TodoListClient.Controllers
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 
-            return View(_commonDBContext.Todo.Where(l => l.Owner.Equals(HttpContext.User.Identity.Name)).ToList());
+            return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
         }
 
         // GET: TodoList/Details/5
@@ -87,6 +87,8 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create([Bind("Title,Owner")] Todo todo)
         {
+            todo.AccountId = HttpContext.User.GetMsalAccountId();
+
             string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
@@ -98,7 +100,7 @@ namespace TodoListClient.Controllers
                 return new EmptyResult();
             }
 
-            PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+            PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title, AccountId = todo.AccountId });
 
             return RedirectToAction("Index");
         }
