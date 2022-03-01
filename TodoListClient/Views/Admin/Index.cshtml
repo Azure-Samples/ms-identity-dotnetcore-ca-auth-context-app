@@ -44,7 +44,7 @@
     $("#btnCreateOrFetch").click(function () {
         $.ajax({
             type: "Get",
-            url: "Admin/CreateOrFetch",
+            url: "CreateOrFetch",
             dataType: "json",
             success: function (response) {
                 $("#formMapping").show();
@@ -65,7 +65,7 @@
             var formData = $(this).serialize();
             $.ajax({
                 type: "POST",
-                url: "Admin/SaveOrUpdateAuthContextDB",
+                url: "SaveOrUpdateAuthContextDB",
                 data: formData,
                 success: function (response) {
                     $("#successMessage").show();
