@@ -122,6 +122,8 @@ namespace TodoListClient.Controllers
                 return NotFound();
             }
 
+            todo.AccountId = HttpContext.User.GetMsalAccountId();
+
             _commonDBContext.Todo.Update(todo);
             _commonDBContext.SaveChanges();
 
@@ -139,7 +141,7 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Delete(int id, [Bind("Id,Title,Owner")] Todo todo)
         {
-            string claimsChallenge = CheckForRequiredAuthContext("Delete");
+            string claimsChallenge = CheckForRequiredAuthContext("Delete");            
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
