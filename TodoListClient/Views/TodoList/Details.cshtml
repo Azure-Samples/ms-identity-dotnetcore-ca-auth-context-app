@@ -2,12 +2,16 @@
 
 @{
     ViewData["Title"] = "Details";
+    var todoId = Model.Id;
 }
 
 <h2>ToDo Details</h2>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    @Html.ActionLink("Create","Create") | 
+    @Html.ActionLink("Back to List", "Index") | 
+    @Html.ActionLink("Edit", "Edit", new { id = todoId }) | 
+    @Html.ActionLink("Delete", "Delete", new { id = todoId })
 </p>
 <table class="table">
     <thead>
