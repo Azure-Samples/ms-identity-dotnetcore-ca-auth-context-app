@@ -1,25 +1,26 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
 {
     [Authorize]
-    public class HomeController : Controller
+    public class HomeController : ControllerBase
     {
-        private readonly ITokenAcquisition tokenAcquisition;
-
-        public HomeController(ITokenAcquisition tokenAcquisition)
-        {
-            this.tokenAcquisition = tokenAcquisition;
+        public HomeController(ITokenAcquisition tokenAcquisition, ILoggerFactory loggerFactory) : base(tokenAcquisition) {
+            _logger = loggerFactory.CreateLogger<HomeController>();
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            await PrintAccessToken($"{typeof(HomeController).Name}.Index");
+           
             return View();
-        }
+        }       
 
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

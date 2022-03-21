@@ -1,28 +1,35 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Threading.Tasks;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
 {
-    public class TodoListController : Controller
+    public class TodoListController : ControllerBase
     {
         private CommonDBContext _commonDBContext;
 
         private IConfiguration _configuration;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
-        public TodoListController(IHttpContextAccessor contextAccessor, IConfiguration configuration, CommonDBContext commonDBContext, MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
+        public TodoListController(
+            ITokenAcquisition tokenAcquisition, ILoggerFactory loggerFactory,
+            IHttpContextAccessor contextAccessor, IConfiguration configuration,
+            CommonDBContext commonDBContext, MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler) : base(tokenAcquisition)
         {
             _configuration = configuration;
             _commonDBContext = commonDBContext;
             this._consentHandler = consentHandler;
+
+            _logger = loggerFactory.CreateLogger<TodoListController>();
         }
 
         // GET: api/values
@@ -41,8 +48,10 @@ namespace TodoListClient.Controllers
 
         // GET: TodoList
         [AuthorizeForScopes(ScopeKeySection = "TodoList:TodoListScope")]
-        public ActionResult Index()
+        public async Task<ActionResult> Index()
         {
+            await PrintAccessToken($"{typeof(TodoListController)}.Index");
+
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 

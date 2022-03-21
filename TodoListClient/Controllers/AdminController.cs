@@ -14,6 +14,7 @@ using Microsoft.Identity.Web;
 using Beta = BetaLib.Microsoft.Graph;
 using TodoListClient.Models;
 using TodoListClient.Common;
+using Microsoft.Extensions.Logging;
 
 namespace TodoListClient.Controllers
 {
@@ -23,7 +24,7 @@ namespace TodoListClient.Controllers
     /// Save and update data in database.
     /// </summary>
     [Authorize]
-    public class AdminController : Controller
+    public class AdminController : ControllerBase
     {
         //private CommonDBContext _commonDBContext;
         private AuthenticationContextClassReferencesOperations _authContextClassReferencesOperations;
@@ -31,15 +32,21 @@ namespace TodoListClient.Controllers
 
         private string TenantId;
 
-        public AdminController(IConfiguration configuration, AuthenticationContextClassReferencesOperations authContextClassReferencesOperations)
+        public AdminController(ITokenAcquisition tokenAcquisition, ILoggerFactory loggerFactory,
+            IConfiguration configuration, AuthenticationContextClassReferencesOperations authContextClassReferencesOperations) :
+            base(tokenAcquisition)
         {
             _configuration = configuration;
             _authContextClassReferencesOperations = authContextClassReferencesOperations;
             TenantId = _configuration["AzureAd:TenantId"];
+
+            _logger = loggerFactory.CreateLogger<AdminController>();
         }
 
         public async Task<IActionResult> Index()
         {
+            await PrintAccessToken($"{typeof(AdminController)}.Index");
+
             // Defaults
             IList<SelectListItem> AuthContextValues = new List<SelectListItem>();
 
@@ -79,7 +86,7 @@ namespace TodoListClient.Controllers
                     {"C1","Require strong authentication" },
                     {"C2","Require compliant devices" },
                     {"C3","Require trusted locations" }
-            };
+                };
 
             string sessionKey = "ACRS";
 
@@ -113,8 +120,10 @@ namespace TodoListClient.Controllers
         /// Retrieves the authentication context and operation mapping saved in database for the tenant.
         /// </summary>
         /// <returns></returns>
-        public IActionResult ViewDetails()
+        public async Task<IActionResult> ViewDetails()
         {
+            await PrintAccessToken($"{typeof(AdminController)}.ViewDetails");
+
             List<AuthContext> authContexts = new List<AuthContext>();
 
             using (var commonDBContext = new CommonDBContext(_configuration))
