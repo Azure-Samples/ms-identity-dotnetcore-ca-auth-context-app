@@ -11,16 +11,17 @@ namespace TodoListClient.Controllers
     [Authorize]
     public class HomeController : ControllerBase
     {
-        public HomeController(ITokenAcquisition tokenAcquisition, ILoggerFactory loggerFactory) : base(tokenAcquisition) {
+        public HomeController(ITokenAcquisition tokenAcquisition, ILoggerFactory loggerFactory) : base(tokenAcquisition)
+        {
             _logger = loggerFactory.CreateLogger<HomeController>();
         }
 
         public async Task<IActionResult> Index()
         {
-            await PrintAccessToken($"{typeof(HomeController).Name}.Index");
-           
+            await PrintAuthenticaltionDetails($"{typeof(HomeController).Name}.Index");
+
             return View();
-        }       
+        }
 
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

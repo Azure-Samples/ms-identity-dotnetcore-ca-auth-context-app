@@ -45,7 +45,7 @@ namespace TodoListClient.Controllers
 
         public async Task<IActionResult> Index()
         {
-            await PrintAccessToken($"{typeof(AdminController)}.Index");
+            await PrintAuthenticaltionDetails($"{typeof(AdminController)}.Index");
 
             // Defaults
             IList<SelectListItem> AuthContextValues = new List<SelectListItem>();
@@ -122,7 +122,7 @@ namespace TodoListClient.Controllers
         /// <returns></returns>
         public async Task<IActionResult> ViewDetails()
         {
-            await PrintAccessToken($"{typeof(AdminController)}.ViewDetails");
+            await PrintAuthenticaltionDetails($"{typeof(AdminController)}.ViewDetails");
 
             List<AuthContext> authContexts = new List<AuthContext>();
 

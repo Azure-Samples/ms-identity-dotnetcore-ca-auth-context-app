@@ -50,7 +50,7 @@ namespace TodoListClient.Controllers
         [AuthorizeForScopes(ScopeKeySection = "TodoList:TodoListScope")]
         public async Task<ActionResult> Index()
         {
-            await PrintAccessToken($"{typeof(TodoListController)}.Index");
+            await PrintAuthenticaltionDetails($"{typeof(TodoListController)}.Index");
 
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
