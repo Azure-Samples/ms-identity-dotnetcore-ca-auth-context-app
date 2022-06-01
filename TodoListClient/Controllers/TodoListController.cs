@@ -58,27 +58,26 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Create
         public ActionResult Create()
         {
-            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-
-            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            if (ChallengeUser(Request.Method))
             {
-                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-
-                return new EmptyResult();
+                return RedirectToAction("Create");
             }
 
-            var todoObject = TodoSessionState(SessionAction.Get);
+            //get todo from session state (if available then this means we were redirected from POST and have to save this todo)
+            var todoFromSessionState = TodoSessionState(SessionAction.Get);
 
-            if (todoObject != null && todoObject.IsInitialized())
+            if (todoFromSessionState != null && todoFromSessionState.IsInitialized)
             {
-                PersistTodo(todoObject);
+                SaveToDatabase(todoFromSessionState);
 
+                //clean session state
                 TodoSessionState(SessionAction.Set);
 
                 return RedirectToAction("Index");
             }
 
             Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
+
             return View(todo);
         }
 
@@ -87,22 +86,19 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create([Bind("Title,Owner")] Todo todo)
         {
+            //add owner accountid to new todo
             todo.AccountId = HttpContext.User.GetMsalAccountId();
+            todo.Owner = HttpContext.User.Identity.Name;
 
-            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-
-            //_postData = todo;
-
-            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            if (ChallengeUser(Request.Method))
             {
-                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-
+                //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, todo);
 
-                return new EmptyResult();
+                return RedirectToAction("Create");
             }
 
-            PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title, AccountId = todo.AccountId });
+            SaveToDatabase(new Todo() { Owner = todo.Owner, Title = todo.Title, AccountId = todo.AccountId });
 
             return RedirectToAction("Index");
         }
@@ -110,7 +106,22 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Edit/5
         public ActionResult Edit(int id)
         {
-            return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
+            //get todo from session state (if available then this means we were redirected from POST and have to update this todo)
+            var todoFromSessionState = TodoSessionState(SessionAction.Get);
+
+            if (todoFromSessionState != null && todoFromSessionState.IsInitialized && todoFromSessionState.Id == id)
+            {
+                UpdateDatabase(todoFromSessionState);
+
+                //clean session state
+                TodoSessionState(SessionAction.Set);
+
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
+            }
         }
 
         // POST: TodoList/Edit/5
@@ -118,7 +129,6 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Edit(int id, [Bind("Id,Title,Owner")] Todo todo)
         {
-            //await _todoListService.EditAsync(todo);
             if (id != todo.Id)
             {
                 return NotFound();
@@ -126,8 +136,15 @@ namespace TodoListClient.Controllers
 
             todo.AccountId = HttpContext.User.GetMsalAccountId();
 
-            _commonDBContext.Todo.Update(todo);
-            _commonDBContext.SaveChanges();
+            if (ChallengeUser(Request.Method))
+            {
+                //save in session state before redirecting to GET handler
+                TodoSessionState(SessionAction.Set, todo);
+
+                return RedirectToAction("Edit");
+            }
+
+            UpdateDatabase(todo);
 
             return RedirectToAction("Index");
         }
@@ -135,7 +152,22 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Delete/5
         public ActionResult Delete(int id)
         {
-            return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
+            //get todo from session state (if available then this means we were redirected from POST and have to save this todo)
+            var todoFromSessionState = TodoSessionState(SessionAction.Get);
+
+            if (todoFromSessionState != null && todoFromSessionState.Id == id)
+            {
+                DeleteFromDatabase(todoFromSessionState);
+
+                //clean session state
+                TodoSessionState(SessionAction.Set);
+
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                return View(_commonDBContext.Todo.FirstOrDefault(t => t.Id == id));
+            }
         }
 
         // POST: TodoList/Delete/5
@@ -143,19 +175,19 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Delete(int id, [Bind("Id,Title,Owner")] Todo todo)
         {
-            string claimsChallenge = CheckForRequiredAuthContext("Delete");            
-
-            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            if (ChallengeUser(HttpMethods.Delete))
             {
-                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-                return new EmptyResult();
+                //save in session state before redirecting to GET handler
+                TodoSessionState(SessionAction.Set, new Todo { Id = id });
+
+                return RedirectToAction("Delete");
             }
 
-            var todo2 = _commonDBContext.Todo.Find(id);
-            if (todo2 != null)
+            //make sure the received todo is inside database before deleting
+            var todoFromDb = _commonDBContext.Todo.Find(id);
+            if (todoFromDb != null)
             {
-                _commonDBContext.Todo.Remove(todo2);
-                _commonDBContext.SaveChanges();
+                DeleteFromDatabase(todoFromDb);
             }
 
             return RedirectToAction("Index");
@@ -190,16 +222,27 @@ namespace TodoListClient.Controllers
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
                     claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
-
                 }
             }
 
             return claimsChallenge;
         }
 
-        private void PersistTodo(Todo todo)
+        private void DeleteFromDatabase(Todo todoToRemove)
         {
-            _commonDBContext.Todo.Add(todo);
+            _commonDBContext.Todo.Remove(todoToRemove);
+            _commonDBContext.SaveChanges();
+        }
+
+        private void SaveToDatabase(Todo todoToSave)
+        {
+            _commonDBContext.Todo.Add(todoToSave);
+            _commonDBContext.SaveChanges();
+        }
+
+        private void UpdateDatabase(Todo todoToUpdate)
+        {
+            _commonDBContext.Todo.Update(todoToUpdate);
             _commonDBContext.SaveChanges();
         }
 
@@ -229,6 +272,28 @@ namespace TodoListClient.Controllers
             return todo;
         }
 
+        /// <summary>
+        /// Create a user challenge for the specified scope if it was requested by CAE 
+        /// </summary>
+        /// <param name="actionName"></param>
+        /// <returns></returns>
+        private bool ChallengeUser(string actionName)
+        {
+            string claimsChallenge = CheckForRequiredAuthContext(actionName);
+
+            if (!string.IsNullOrWhiteSpace(claimsChallenge))
+            {
+                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Enumerator to distingush between session state actions
+        /// </summary>
         private enum SessionAction
         {
             Set,
