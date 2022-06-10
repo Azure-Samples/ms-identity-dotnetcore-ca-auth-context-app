@@ -46,7 +46,25 @@ namespace TodoListClient.Controllers
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 
-            return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
+            //serveless database should have time to wake up
+            var retryTimes = 3;
+            while (retryTimes-- > 0)
+            {
+                try
+                {
+                    return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
+                }
+                catch (Exception)
+                {
+                    //throw exception if database didn't wakeup after 3 attempts
+                    if (retryTimes == 0)
+                    {
+                        throw;
+                    }
+                }
+            }
+
+            return View();
         }
 
         // GET: TodoList/Details/5

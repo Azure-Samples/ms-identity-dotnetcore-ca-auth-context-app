@@ -89,8 +89,24 @@ namespace TodoListClient
 
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
             {
-                var context = serviceScope.ServiceProvider.GetRequiredService<CommonDBContext>();
-                context.Database.EnsureCreated();
+                //serveless database should have time to wake up
+                var retryTimes = 3;
+                while (retryTimes-- > 0)
+                {
+                    try
+                    {
+                        var context = serviceScope.ServiceProvider.GetRequiredService<CommonDBContext>();
+                        context.Database.EnsureCreated();
+                    }
+                    catch (Exception)
+                    {
+                        //throw exception if database didn't wakeup after 3 attempts
+                        if (retryTimes == 0)
+                        {
+                            throw;
+                        }
+                    }
+                }
             }
 
             if (env.IsDevelopment())
