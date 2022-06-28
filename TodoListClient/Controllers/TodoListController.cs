@@ -113,7 +113,7 @@ namespace TodoListClient.Controllers
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, todo);
 
-                return RedirectToAction("Create");
+                return View();
             }
 
             SaveToDatabase(new Todo() { Owner = todo.Owner, Title = todo.Title, AccountId = todo.AccountId });
@@ -159,7 +159,7 @@ namespace TodoListClient.Controllers
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, todo);
 
-                return RedirectToAction("Edit");
+                return View();
             }
 
             UpdateDatabase(todo);
