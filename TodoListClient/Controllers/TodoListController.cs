@@ -198,7 +198,7 @@ namespace TodoListClient.Controllers
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, new Todo { Id = id });
 
-                return RedirectToAction("Delete");
+                return View(); // RedirectToAction("Delete");
             }
 
             //make sure the received todo is inside database before deleting
