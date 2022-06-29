@@ -76,22 +76,13 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Create
         public ActionResult Create()
         {
-            if (ChallengeUser(Request.Method))
-            {
-                return RedirectToAction("Create");
-            }
-
             //get todo from session state (if available then this means we were redirected from POST and have to save this todo)
             var todoFromSessionState = TodoSessionState(SessionAction.Get);
 
             if (todoFromSessionState != null && todoFromSessionState.IsInitialized)
             {
-                SaveToDatabase(todoFromSessionState);
-
-                //clean session state
                 TodoSessionState(SessionAction.Set);
-
-                return RedirectToAction("Index");
+                return Create(todoFromSessionState);
             }
 
             Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
@@ -108,7 +99,7 @@ namespace TodoListClient.Controllers
             todo.AccountId = HttpContext.User.GetMsalAccountId();
             todo.Owner = HttpContext.User.Identity.Name;
 
-            if (ChallengeUser(Request.Method))
+            if (ChallengeUser(HttpMethods.Post))
             {
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, todo);
@@ -130,11 +121,7 @@ namespace TodoListClient.Controllers
             if (todoFromSessionState != null && todoFromSessionState.IsInitialized && todoFromSessionState.Id == id)
             {
                 UpdateDatabase(todoFromSessionState);
-
-                //clean session state
-                TodoSessionState(SessionAction.Set);
-
-                return RedirectToAction("Index");
+                return Edit(todoFromSessionState.Id, todoFromSessionState);
             }
             else
             {
@@ -154,7 +141,7 @@ namespace TodoListClient.Controllers
 
             todo.AccountId = HttpContext.User.GetMsalAccountId();
 
-            if (ChallengeUser(Request.Method))
+            if (ChallengeUser(HttpMethods.Post))
             {
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, todo);
@@ -175,12 +162,9 @@ namespace TodoListClient.Controllers
 
             if (todoFromSessionState != null && todoFromSessionState.Id == id)
             {
-                DeleteFromDatabase(todoFromSessionState);
-
                 //clean session state
                 TodoSessionState(SessionAction.Set);
-
-                return RedirectToAction("Index");
+                return Delete(todoFromSessionState.Id, todoFromSessionState);
             }
             else
             {
@@ -198,7 +182,7 @@ namespace TodoListClient.Controllers
                 //save in session state before redirecting to GET handler
                 TodoSessionState(SessionAction.Set, new Todo { Id = id });
 
-                return View(); // RedirectToAction("Delete");
+                return View();
             }
 
             //make sure the received todo is inside database before deleting
@@ -297,6 +281,7 @@ namespace TodoListClient.Controllers
         /// <returns></returns>
         private bool ChallengeUser(string actionName)
         {
+            //get challenge from token or from session state
             string claimsChallenge = CheckForRequiredAuthContext(actionName);
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
