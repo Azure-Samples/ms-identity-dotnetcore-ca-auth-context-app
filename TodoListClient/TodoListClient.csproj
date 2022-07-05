@@ -8,31 +8,31 @@
 
   <ItemGroup>
     <Compile Remove="AppCreationScripts\**" />
+    <Compile Remove="Properties\ServiceDependencies\**" />
     <Compile Remove="ReadmeFiles\**" />
     <Content Remove="AppCreationScripts\**" />
+    <Content Remove="Properties\ServiceDependencies\**" />
     <Content Remove="ReadmeFiles\**" />
     <EmbeddedResource Remove="AppCreationScripts\**" />
+    <EmbeddedResource Remove="Properties\ServiceDependencies\**" />
     <EmbeddedResource Remove="ReadmeFiles\**" />
     <None Remove="AppCreationScripts\**" />
+    <None Remove="Properties\ServiceDependencies\**" />
     <None Remove="ReadmeFiles\**" />
+    <_WebToolingArtifacts Remove="Properties\ServiceDependencies\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="6.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="6.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.5" />
-    <PackageReference Include="Microsoft.Graph" Version="4.29.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.6" />
+    <PackageReference Include="Microsoft.Graph" Version="4.33.0" />
     <PackageReference Include="Microsoft.Graph.Beta" Version="4.31.0-preview" Aliases="BetaLib" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.44.0" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.24.1" />
-    <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraphBeta" Version="1.24.1" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.24.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.5" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\PublishProfiles\" />
-    <Folder Include="Properties\ServiceDependencies\" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.45.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.1" />
+    <PackageReference Include="Microsoft.Identity.Web.MicrosoftGraphBeta" Version="1.25.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.25.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.6" />
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="https://json.schemastore.org/global.json" /></VisualStudio></ProjectExtensions>
