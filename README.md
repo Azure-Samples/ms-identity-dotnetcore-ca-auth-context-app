@@ -31,7 +31,7 @@ description: "This sample demonstrates using the Conditional Access auth context
 This code sample uses the Conditional Access Auth Context to demand a higher bar of authentication for certain high-privileged and sensitive operations in a Web App.
 
 > To use the CA Auth context in a Web API, please try the [Use the Conditional Access auth context to perform step-up authentication for high-privilege operations in a Web API](https://github.com/Azure-Samples/ms-identity-ca-auth-context/blob/main/README.md) code sample
- 
+
 ## Scenario
 
 1. The client ASP.NET Core Web App uses the [Microsoft.Identity.Web](https://aka.ms/microsoft-identity-web) and Microsoft Authentication Library for .NET ([MSAL.NET](https://aka.ms/msal-net)) to sign-in a user with **Azure AD**.
@@ -40,7 +40,7 @@ This code sample uses the Conditional Access Auth Context to demand a higher bar
 ![Overview](./ReadmeFiles/topology.png)
 
 > :information_source: Check out the recorded session on this topic: [Use Conditional Access Auth Context in your app for step-up authentication](https://www.youtube.com/watch?v=_iO7CfoktTY&ab_channel=Microsoft365Community)
-> 
+
 ## Prerequisites
 
 - [Visual Studio](https://visualstudio.microsoft.com/downloads/)
@@ -149,6 +149,8 @@ Open the project in your IDE (like Visual Studio or Visual Studio Code) to confi
 1. Find the key `ClientId` and replace the existing value with the application ID (clientId) of `TodoListClient-authContext-webapp` app copied from the Azure portal.
 1. Find the key `ClientSecret` and replace the existing value with the key you saved during the creation of `TodoListClient-authContext-webapp` copied from the Azure portal.
 
+ > You'd note in the *appsettings.json* file that Microsoft Graph settings are for the beta version of Microsoft Graph. This is because the API is only available in MS Graph beta at the time of writing this sample. You would update your code to use the MS Graph production (v1.0) version when the API becomes GA.
+
 ## Running the sample
 
 > For Visual Studio Users
@@ -223,6 +225,12 @@ If an operation was saved for a certain authContext and there is a CA policy con
                  .AddInMemoryTokenCaches();
     ```
 
+    We also add a class that helps us when working with Microsoft Graph using the following line
+
+    ```csharp
+        services.AddScoped<AuthenticationContextClassReferencesOperations>();   
+    ```
+    
 1. In `AdminController.cs`, the method **GetAuthenticationContextValues** returns a default set of AuthN context values for the app to work with, either from Graph or a default hard coded set.
 
     ```csharp
@@ -237,20 +245,15 @@ If an operation was saved for a certain authContext and there is a CA policy con
 
         string sessionKey = "ACRS";
 
-        if (HttpContext.Session.Get<Dictionary<string, string>>(sessionKey) != default)
-        {
+        if (HttpContext.Session.Get<Dictionary<string, string>>(sessionKey) != default)        {
             dictACRValues = HttpContext.Session.Get<Dictionary<string, string>>(sessionKey);
         }
-        else
-        {
+        else        {
             var existingAuthContexts = await _authContextClassReferencesOperations.ListAuthenticationContextClassReferencesAsync();
 
-            if (existingAuthContexts.Count() > 0)                 
-            {
+            if (existingAuthContexts.Count() > 0) {
                 dictACRValues.Clear();
-
-                foreach (var authContext in existingAuthContexts)
-                {
+                foreach (var authContext in existingAuthContexts) {
                     dictACRValues.Add(authContext.Id, authContext.DisplayName);
                 }
 
@@ -342,7 +345,7 @@ If an operation was saved for a certain authContext and there is a CA policy con
 1. In `TodoListController.cs`, the method **CheckForRequiredAuthContext** retrieves the acrsvalues from database for the request method. Then checks if the access token has `acrs` claim with acrsValue. If does not exists then it creates a **claims** payload to be sent back to Azure AD.
 
     ```csharp
-            public string CheckForRequiredAuthContext(string method)
+        public string CheckForRequiredAuthContext(string method)
         {
             string claimsChallenge = string.Empty;
 
@@ -364,17 +367,13 @@ If an operation was saved for a certain authContext and there is a CA policy con
                 if (acrsClaim?.Value != savedAuthContextId)
                 {
                     claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
-                
                 }
-            }
-
-            return claimsChallenge;
-        }
+            }          
     ```
 
 ### Code for the Web App (TodoListClient)
 
-Methods in `TodoListController.cs` challenges the user to re-authenticate if a claims payload is returned by the CheckforRequiredAuthContext():
+Methods in `TodoListController.cs` challenges the user to re-authenticate if a claims payload is returned by the *CheckforRequiredAuthContext()*:
 
 ```csharp
  string claimsChallenge = CheckForRequiredAuthContext("Delete");
@@ -395,55 +394,45 @@ Take a look into the example of using session state.
 
 ```csharp
     // GET: TodoList/Create
-    public ActionResult Create()
-    {
-        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-        if (!string.IsNullOrWhiteSpace(claimsChallenge))
-        {
-            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
-            return new EmptyResult();
-        }
-        var todoObject = TodoSessionState(SessionAction.Get);
-        if (todo != null && todoObject.IsInitialized())
-        {
-            PersistTodo(todoObject);
-            TodoSessionState(SessionAction.Set);
-            return RedirectToAction("Index");
-        }
-        Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
-        return View(todo);
-    }
-    // POST: TodoList/Create
-    [HttpPost]
-    [ValidateAntiForgeryToken]
     public ActionResult Create([Bind("Title,Owner")] Todo todo)
     {
-        string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
-        if (!string.IsNullOrWhiteSpace(claimsChallenge))
+        //add owner accountid to new todo
+        todo.AccountId = HttpContext.User.GetMsalAccountId();
+        todo.Owner = GetCurrentUsersName();
+
+        if (ChallengeUser(HttpMethods.Post))
         {
-            _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+            //save in session state before redirecting to GET handler
             TodoSessionState(SessionAction.Set, todo);
-            return new EmptyResult();
+
+            return View();
         }
-        PersistTodo(new Todo() { Owner = HttpContext.User.Identity.Name, Title = todo.Title });
+
+        SaveToDoToDatabase(new Todo() { Owner = todo.Owner, Title = todo.Title, AccountId = todo.AccountId });
+
         return RedirectToAction("Index");
     }
-    private Todo TodoSessionState(SessionAction action, Todo todo = null)
+    // POST: TodoList/Delete
+    public ActionResult Delete(int id, [Bind("Id,Title,Owner")] Todo todo)
     {
-        string todoObject = "Todo";
-            switch (action)
-            {
-                case SessionAction.Set:
-                    HttpContext.Session.SetString(todoObject, todo != null ? JsonSerializer.Serialize(todo) : "");
-                    break;
-                case SessionAction.Get:
-                    var obj = HttpContext.Session.GetString(todoObject);
-                    return !string.IsNullOrEmpty(obj) ? JsonSerializer.Deserialize<Todo>(obj) : null;
-                default:
-                    break;
-            }
-            return todo;
+        if (ChallengeUser(HttpMethods.Delete))
+        {
+            //save in session state before redirecting to GET handler
+            TodoSessionState(SessionAction.Set, new Todo { Id = id });
+
+            return View();
+        }
+
+        //make sure the received todo is inside database before deleting
+        var todoFromDb = _commonDBContext.Todo.Find(id);
+        if (todoFromDb != null)
+        {
+            DeleteToDoFromDatabase(todoFromDb);
+        }
+
+        return RedirectToAction("Index");
     }
+
 ```
 
 ## More information

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web.UI;
 using TodoListClient.Models;
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.EntityFrameworkCore;
 
 namespace TodoListClient
@@ -55,7 +56,7 @@ namespace TodoListClient
             // By default, the claims mapping will map claim names in the old format to accommodate older SAML applications.
             // 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' instead of 'roles'
             // This flag ensures that the ClaimsIdentity claims collection will be built from the claims in the token
-            // JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+            JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
             // Adds Microsoft Identity platform (AAD v2.0) support to authenticate users
             services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
@@ -87,27 +88,7 @@ namespace TodoListClient
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
 
-            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
-            {
-                //serveless database should have time to wake up
-                var retryTimes = 3;
-                while (retryTimes-- > 0)
-                {
-                    try
-                    {
-                        var context = serviceScope.ServiceProvider.GetRequiredService<CommonDBContext>();
-                        context.Database.EnsureCreated();
-                    }
-                    catch (Exception)
-                    {
-                        //throw exception if database didn't wakeup after 3 attempts
-                        if (retryTimes == 0)
-                        {
-                            throw;
-                        }
-                    }
-                }
-            }
+            EnsureDatabaseAvailability(app);
 
             if (env.IsDevelopment())
             {
@@ -144,6 +125,37 @@ namespace TodoListClient
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
             });
+        }
+
+        /// <summary>
+        /// Hits the Datbase multiple times to ensure that its waken up and available for the app
+        /// </summary>
+        /// <param name="app"></param>
+        /// <exception cref="Exception"></exception>
+        private static void EnsureDatabaseAvailability(IApplicationBuilder app)
+        {
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            {
+                // give the database should have time to wake up
+                var retryTimes = 3;
+                while (retryTimes-- > 0)
+                {
+                    try
+                    {
+                        var context = serviceScope.ServiceProvider.GetRequiredService<CommonDBContext>();
+                        context.Database.EnsureCreated();
+                    }
+                    catch (Exception)
+                    {
+                        //throw exception if database didn't wakeup after 3 attempts
+                        if (retryTimes == 0)
+                        {
+                            throw new Exception(
+                                "Unable to reach the database after multiple tries. The app will not be able to function as expected.");
+                        }
+                    }
+                }
+            }
         }
     }
 }

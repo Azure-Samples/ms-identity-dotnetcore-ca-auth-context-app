@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
@@ -23,12 +24,47 @@ namespace TodoListClient.Controllers
             _configuration = configuration;
             _commonDBContext = commonDBContext;
             this._consentHandler = consentHandler;
+
+            EnsureDatabaseIsAwakeAndAvailable();
+        }
+
+        /// <summary>
+        /// Makes sure Database is available
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        private void EnsureDatabaseIsAwakeAndAvailable()
+        {
+
+            // give the database some time to wake up
+            var retryTimes = 3;
+            while (retryTimes-- > 0)
+            {
+                try
+                {
+                    _commonDBContext.Todo.Take(2);
+                }
+                catch (Exception)
+                {
+                    //throw exception if database didn't wakeup after 3 attempts
+                    if (retryTimes == 0)
+                    {
+                        throw new Exception(
+                            "Unable to reach the database after multiple tries. The app will not be able to function as expected.");
+                    }
+                }
+            }
+        }
+
+        private string GetCurrentUsersName()
+        {
+            return HttpContext?.User?.Identity?.Name;
         }
 
         // GET: api/values
         [HttpGet]
         public IEnumerable<Todo> Get()
         {
+            EnsureDatabaseIsAwakeAndAvailable();
             return _commonDBContext.Todo.ToList();
         }
 
@@ -46,25 +82,9 @@ namespace TodoListClient.Controllers
             //reset session on every entry to TODO's list
             TodoSessionState(SessionAction.Set);
 
-            //serveless database should have time to wake up
-            var retryTimes = 3;
-            while (retryTimes-- > 0)
-            {
-                try
-                {
-                    return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
-                }
-                catch (Exception)
-                {
-                    //throw exception if database didn't wakeup after 3 attempts
-                    if (retryTimes == 0)
-                    {
-                        throw;
-                    }
-                }
-            }
+            EnsureDatabaseIsAwakeAndAvailable();
 
-            return View();
+            return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
         }
 
         // GET: TodoList/Details/5
@@ -85,7 +105,7 @@ namespace TodoListClient.Controllers
                 return Create(todoFromSessionState);
             }
 
-            Todo todo = new Todo() { Owner = HttpContext.User.Identity.Name };
+            Todo todo = new Todo() { Owner = GetCurrentUsersName() };
 
             return View(todo);
         }
@@ -97,7 +117,7 @@ namespace TodoListClient.Controllers
         {
             //add owner accountid to new todo
             todo.AccountId = HttpContext.User.GetMsalAccountId();
-            todo.Owner = HttpContext.User.Identity.Name;
+            todo.Owner = GetCurrentUsersName();
 
             if (ChallengeUser(HttpMethods.Post))
             {
@@ -107,7 +127,7 @@ namespace TodoListClient.Controllers
                 return View();
             }
 
-            SaveToDatabase(new Todo() { Owner = todo.Owner, Title = todo.Title, AccountId = todo.AccountId });
+            SaveToDoToDatabase(new Todo() { Owner = todo.Owner, Title = todo.Title, AccountId = todo.AccountId });
 
             return RedirectToAction("Index");
         }
@@ -120,7 +140,7 @@ namespace TodoListClient.Controllers
 
             if (todoFromSessionState != null && todoFromSessionState.IsInitialized && todoFromSessionState.Id == id)
             {
-                UpdateDatabase(todoFromSessionState);
+                UpdateToDoInDatabase(todoFromSessionState);
                 return Edit(todoFromSessionState.Id, todoFromSessionState);
             }
             else
@@ -149,7 +169,7 @@ namespace TodoListClient.Controllers
                 return View();
             }
 
-            UpdateDatabase(todo);
+            UpdateToDoInDatabase(todo);
 
             return RedirectToAction("Index");
         }
@@ -189,7 +209,7 @@ namespace TodoListClient.Controllers
             var todoFromDb = _commonDBContext.Todo.Find(id);
             if (todoFromDb != null)
             {
-                DeleteFromDatabase(todoFromDb);
+                DeleteToDoFromDatabase(todoFromDb);
             }
 
             return RedirectToAction("Index");
@@ -230,19 +250,19 @@ namespace TodoListClient.Controllers
             return claimsChallenge;
         }
 
-        private void DeleteFromDatabase(Todo todoToRemove)
+        private void DeleteToDoFromDatabase(Todo todoToRemove)
         {
             _commonDBContext.Todo.Remove(todoToRemove);
             _commonDBContext.SaveChanges();
         }
 
-        private void SaveToDatabase(Todo todoToSave)
+        private void SaveToDoToDatabase(Todo todoToSave)
         {
             _commonDBContext.Todo.Add(todoToSave);
             _commonDBContext.SaveChanges();
         }
 
-        private void UpdateDatabase(Todo todoToUpdate)
+        private void UpdateToDoInDatabase(Todo todoToUpdate)
         {
             _commonDBContext.Todo.Update(todoToUpdate);
             _commonDBContext.SaveChanges();
@@ -286,7 +306,7 @@ namespace TodoListClient.Controllers
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
-                _consentHandler.ChallengeUser(new string[] { "user.read" }, claimsChallenge);
+                _consentHandler.ChallengeUser(new string[] { _configuration["GraphBeta:Scopes"] }, claimsChallenge);
 
                 return true;
             }
@@ -295,7 +315,7 @@ namespace TodoListClient.Controllers
         }
 
         /// <summary>
-        /// Enumerator to distingush between session state actions
+        /// Enumerator to distinguish between session state actions
         /// </summary>
         private enum SessionAction
         {
