@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using TodoListClient.Models;
 
 namespace TodoListClient.Controllers
@@ -19,11 +18,15 @@ namespace TodoListClient.Controllers
         private IConfiguration _configuration;
         private readonly MicrosoftIdentityConsentAndConditionalAccessHandler _consentHandler;
 
+        private string _msalAccountId;
+
         public TodoListController(IHttpContextAccessor contextAccessor, IConfiguration configuration, CommonDBContext commonDBContext, MicrosoftIdentityConsentAndConditionalAccessHandler consentHandler)
         {
             _configuration = configuration;
             _commonDBContext = commonDBContext;
             this._consentHandler = consentHandler;
+
+            _msalAccountId = HttpContext.User.GetMsalAccountId();
 
             EnsureDatabaseIsAwakeAndAvailable();
         }
@@ -84,7 +87,7 @@ namespace TodoListClient.Controllers
 
             EnsureDatabaseIsAwakeAndAvailable();
 
-            return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(HttpContext.User.GetMsalAccountId())).ToList());
+            return View(_commonDBContext.Todo.Where(l => l.AccountId.Equals(_msalAccountId)).ToList());
         }
 
         // GET: TodoList/Details/5
@@ -116,7 +119,7 @@ namespace TodoListClient.Controllers
         public ActionResult Create([Bind("Title,Owner")] Todo todo)
         {
             //add owner accountid to new todo
-            todo.AccountId = HttpContext.User.GetMsalAccountId();
+            todo.AccountId = _msalAccountId;
             todo.Owner = GetCurrentUsersName();
 
             if (ChallengeUser(HttpMethods.Post))
@@ -159,7 +162,7 @@ namespace TodoListClient.Controllers
                 return NotFound();
             }
 
-            todo.AccountId = HttpContext.User.GetMsalAccountId();
+            todo.AccountId = _msalAccountId;
 
             if (ChallengeUser(HttpMethods.Post))
             {
