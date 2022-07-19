@@ -348,3 +348,6 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+/TodoListClient/Properties/ServiceDependencies/CAAuthNContextAppDemo - Web Deploy
+/TodoListClient/Properties/serviceDependencies.CAAuthNContextAppDemo - Web Deploy.json
+/AppCreationScripts/createdApps.html

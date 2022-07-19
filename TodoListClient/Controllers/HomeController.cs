@@ -9,13 +9,6 @@ namespace TodoListClient.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        private readonly ITokenAcquisition tokenAcquisition;
-
-        public HomeController(ITokenAcquisition tokenAcquisition)
-        {
-            this.tokenAcquisition = tokenAcquisition;
-        }
-
         public IActionResult Index()
         {
             return View();

@@ -12,9 +12,9 @@
         public string AccountId { get; set; }
 
         //Return true only if both Title and Owners are not empty strings 
-        public bool IsInitialized()
+        public bool IsInitialized
         {
-            return !string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(Owner) && !string.IsNullOrEmpty(AccountId);
+            get { return !string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(Owner) && !string.IsNullOrEmpty(AccountId); }
         }
     }
 }
