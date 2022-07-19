@@ -145,14 +145,15 @@ namespace TodoListClient
                         var context = serviceScope.ServiceProvider.GetRequiredService<CommonDBContext>();
                         context.Database.EnsureCreated();
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         //throw exception if database didn't wakeup after 3 attempts
                         if (retryTimes == 0)
                         {
                             throw new Exception(
-                                "Unable to reach the database after multiple tries. The app will not be able to function as expected.");
+                                $"Unable to reach the database after multiple tries. The app will not be able to function as expected. {ex}");
                         }
+
                     }
                 }
             }

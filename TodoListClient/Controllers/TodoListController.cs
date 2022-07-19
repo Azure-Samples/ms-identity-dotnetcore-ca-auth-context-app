@@ -46,13 +46,13 @@ namespace TodoListClient.Controllers
                 {
                     _commonDBContext.Todo.Take(2);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     //throw exception if database didn't wakeup after 3 attempts
                     if (retryTimes == 0)
                     {
                         throw new Exception(
-                            "Unable to reach the database after multiple tries. The app will not be able to function as expected.");
+                             $"Unable to reach the database after multiple tries. The app will not be able to function as expected. {ex}");
                     }
                 }
             }
