@@ -1,10 +1,13 @@
 {
   "Sample": {
-    "Title": "This sample demonstrates using the Conditional Access auth context to perform step-up authentication for high-privilege and sensitive operations in a web app.",
+    "Title": "Use the Conditional Access auth context to perform step-up authentication for high-privilege operations in a Web app",
     "Level": 300,
     "Client": "ASP.NET Core Web App",
     "RepositoryUrl": "ms-identity-dotnetcore-ca-auth-context-app",
-    "Endpoint": "AAD v2.0"
+    "Endpoint": "AAD v2.0",
+    "Description":"This sample demonstrates using the Conditional Access auth context to perform step-up authentication for high-privilege and sensitive operations in a web app.",
+    "Languages": [ "csharp" ],
+    "Products": [ "aspnet-core", "azure-active-directory", "ms-graph" ]
   },
 
   /*

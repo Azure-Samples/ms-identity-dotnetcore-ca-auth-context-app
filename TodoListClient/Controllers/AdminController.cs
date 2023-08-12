@@ -125,12 +125,22 @@ namespace TodoListClient.Controllers
             return View(authContexts);
         }
 
+        /// <summary>
+        /// Delete an configuration item by key
+        /// </summary>
+        /// <param name="id">Always will be in form of AuthContextId_Operation</param>
+        /// <returns></returns>
         public ActionResult Delete(string id)
         {
+            var authContextId = id.Split("_")[0];
+            var operationName = id.Split("_")[1];
+
             AuthContext authContext = null;
             using (var commonDBContext = new CommonDBContext(_configuration))
             {
-                authContext = commonDBContext.AuthContext.FirstOrDefault(x => x.AuthContextId == id && x.TenantId == TenantId);
+                authContext = commonDBContext
+                    .AuthContext
+                    .FirstOrDefault(x => x.AuthContextId == authContextId && x.Operation == operationName && x.TenantId == TenantId);
             }
             return View(authContext);
         }
