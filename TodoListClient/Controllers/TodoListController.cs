@@ -13,6 +13,7 @@ namespace TodoListClient.Controllers
 {
     public class TodoListController : Controller
     {
+        private const string AcrsClaimName = "acrs";
         private CommonDBContext _commonDBContext;
 
         private IConfiguration _configuration;
@@ -58,7 +59,7 @@ namespace TodoListClient.Controllers
         // GET: TodoList/Create
         public ActionResult Create()
         {
-            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+            string claimsChallenge = GetClaimsChallengeForOperation("c1");
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
@@ -89,7 +90,7 @@ namespace TodoListClient.Controllers
         {
             todo.AccountId = HttpContext.User.GetMsalAccountId();
 
-            string claimsChallenge = CheckForRequiredAuthContext(Request.Method);
+            string claimsChallenge = GetClaimsChallengeForOperation("c2");
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
@@ -141,7 +142,7 @@ namespace TodoListClient.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Delete(int id, [Bind("Id,Title,Owner")] Todo todo)
         {
-            string claimsChallenge = CheckForRequiredAuthContext("Delete");            
+            string claimsChallenge = GetClaimsChallengeForOperation("c6");            
 
             if (!string.IsNullOrWhiteSpace(claimsChallenge))
             {
@@ -164,30 +165,29 @@ namespace TodoListClient.Controllers
         /// Checks if the access token has acrs claim with acrsValue.
         /// If does not exists then it generates a claims payload to be sent to /authorize endpoint
         /// </summary>
-        /// <param name="method"></param>
-        /// <returns></returns>
-        public string CheckForRequiredAuthContext(string method)
+        /// <param name="method">The name of the operation that is protected by the AuthContext</param>
+        /// <returns>A claims challenge, which will inform the token issuer that certain constraints (e.g. MFA) must be satisfied.</returns>
+        private string GetClaimsChallengeForOperation(string caeContextId)
         {
             string claimsChallenge = string.Empty;
 
-            string savedAuthContextId = _commonDBContext.AuthContext.FirstOrDefault(x => x.Operation == method && x.TenantId == _configuration["AzureAD:TenantId"])?.AuthContextId;
+            //string savedAuthContextId = _commonDBContext.AuthContext.FirstOrDefault(x => x.Operation == method && x.TenantId == _configuration["AzureAD:TenantId"])?.AuthContextId;
 
-            if (!string.IsNullOrEmpty(savedAuthContextId))
+            if (!string.IsNullOrEmpty(caeContextId))
             {
                 HttpContext context = this.HttpContext;
 
-                string authenticationContextClassReferencesClaim = "acrs";
-
+                // should not happen, as by this point the user should be authenticated
                 if (context == null || context.User == null || context.User.Claims == null || !context.User.Claims.Any())
                 {
-                    throw new ArgumentNullException("No Usercontext is available to pick claims from");
+                    throw new ArgumentNullException("No UserContext is available to pick claims from");
                 }
 
-                Claim acrsClaim = context.User.FindAll(authenticationContextClassReferencesClaim).FirstOrDefault(x => x.Value == savedAuthContextId);
+                Claim acrsClaim = context.User.FindAll(AcrsClaimName).FirstOrDefault(x => x.Value == caeContextId);
 
-                if (acrsClaim?.Value != savedAuthContextId)
+                if (acrsClaim?.Value != caeContextId)
                 {
-                    claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + savedAuthContextId + "\"}}}";
+                    claimsChallenge = "{\"id_token\":{\"acrs\":{\"essential\":true,\"value\":\"" + caeContextId + "\"}}}";
 
                 }
             }
